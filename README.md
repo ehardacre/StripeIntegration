@@ -3,13 +3,6 @@ Integrating Stripe in an iOS app using Heroku and Swift
  
  # Downloads Necessary
  Download Composer: <br />
- run these lines in terminal:
- ```
- php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
-php -r "if (hash_file('SHA384', 'composer-setup.php') === '669656bab3166a7aff8a7506b8cb2d1c292f042046c5a994c43155c0be6190fa0355160742ab2e1c88d40d5be660b410') { echo 'Installer verified'; } else { echo 'Installer corrupt'; unlink('composer-setup.php'); } echo PHP_EOL;"
-php composer-setup.php
-php -r "unlink('composer-setup.php');"
- ``` 
  Download Git: https://git-scm.com/downloads <br />
  Download PHP: http://php-osx.liip.ch/ <br />
  Download Heroku Toolbelt (you will need homebrew installed to download this): <br />
@@ -42,6 +35,10 @@ php -r "unlink('composer-setup.php');"
  cd stripe-integration
  cd stripe-server
  git init
+ php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
+ php -r "if (hash_file('SHA384', 'composer-setup.php') === '669656bab3166a7aff8a7506b8cb2d1c292f042046c5a994c43155c0be6190fa0355160742ab2e1c88d40d5be660b410') { echo 'Installer verified'; } else { echo 'Installer corrupt'; unlink('composer-setup.php'); } echo PHP_EOL;"
+ php composer-setup.php
+ php -r "unlink('composer-setup.php');"
  php composer.phar require stripe/stripe-php
  touch Procfile
  touch index.php
@@ -57,51 +54,48 @@ php -r "unlink('composer-setup.php');"
  ```
  web: vendor/bin/heroku-php-apache2
  ```
- in index.php paste (this code is not necessary but is a good check of whether or not the server is working)
+ in index.php paste (this code is not necessary but is a good check of whether or not the server is working). (Seems to work better if quotes are vertical not curled).
  ```
- <html>
-<body>
-<p>
-<?php
-echo “Hello world!”;
-?>
-</p>
-</body>
+<html>
+ <body>
+ <?php echo "<p>Hello World</p>"; ?> 
+ </body>
 </html>
  ```
  in the charge.php file paste:
+ (Again, seems to work better with vertical quotes rather than curled. In other words, make sure strings are recognized as strings.)
  ```
  <?php
-require_once(‘vendor/autoload.php’);
+require_once('vendor/autoload.php');
 ```
-below, where it says "stripe test key" input your stripe test publishable key that you can get <br />
+below, where it says "stripe test key" input your stripe test PRIVATE key that you can get <br />
 by going to your stripe dashboard and clicking on API on the left side. 
 ```
-\Stripe\Stripe::setApiKey(“stripe test key”);
-$token = $_POST[‘stripeToken’];
-$amount = $_POST[‘amount’];
-$currency = $_POST[‘currency’];
-$description = $_POST[‘description’];
-try {
- $charge = \Stripe\Charge::create(array(
- “amount” => $amount*100, // Convert amount in cents to dollar
- “currency” => $currency,
- “source” => $token,
- “description” => $description)
- );
-// Check that it was paid:
- if ($charge->paid == true) {
- $response = array( ‘status’=> ‘Success’, ‘message’=>’Payment has been charged!!’ );
- } else { // Charge was not paid!
- $response = array( ‘status’=> ‘Failure’, ‘message’=>’Your payment could NOT be processed because the payment system rejected the transaction. You can try again or use another card.’ );
- }
- header(‘Content-Type: application/json’);
- echo json_encode($response);
-} catch(\Stripe\Error\Card $e) {
- // The card has been declined
-header(‘Content-Type: application/json’);
- echo json_encode($response);
-}
+  \Stripe\Stripe::setApiKey("sk_test_yourprivatetestkey");
+  $token = $_POST['stripeToken'];
+  $amount = $_POST['amount'];
+  $currency = $_POST['currency'];
+  $description = $_POST['description'];
+  try {
+   $charge = \Stripe\Charge::create(array(
+   "amount" => $amount*100, // Convert amount in cents to dollar
+   "currency" => $currency,
+   "source" => $token,
+   "description" => $description)
+   );
+  // Check that it was paid:
+   if ($charge->paid == true) {
+   $response = array("status"=>"Success","message"=>"Payment has been charged!!");
+   } else { // Charge was not paid!
+   $response = array( 'status'=> 'Failure', 'message'=>'Your_payment_could NOT be processed because the payment system rejected the transaction. You can try again or use another card.' );
+   }
+   header('Content-Type: application/json');
+   echo json_encode($response);
+  } catch(\Stripe\Error\Card $e) {
+   // The card has been declined
+  header('Content-Type: application/json');
+   echo json_encode($response);
+  }
 ?>
  ```
  Save all of the files and close them. <br />
@@ -113,6 +107,7 @@ header(‘Content-Type: application/json’);
  git add .
  git commit -m "First Upload"
  heroku create
+ heroku login
  git push heroku master
  heroku open
  cd
@@ -129,6 +124,11 @@ header(‘Content-Type: application/json’);
  pod 'Stripe'
  pod 'Alamofire'
  ```
+ Also be sure to uncomment the line at the top specifying the iOS. 
+ ```
+ platform :ios, '9.0'
+ ```
+
  back to terminal:
  ```
  cd stripe-integration
@@ -136,6 +136,8 @@ header(‘Content-Type: application/json’);
  pod install
  open stripe-test.xcworkspace
  ```
+ Above make sure you are working in the stripe-test.xcworkspace. There is an important difference between this and your previous but still available stripe-text.xcodeproj.
+
  this will prep you for the next part
  
  # Integrating The Stripe SDK in Xcode
@@ -155,6 +157,12 @@ header(‘Content-Type: application/json’);
  ```
  Stripe.setDefaultPublishableKey("pk_test_publishableKey")
  ```
+
+ make sure to add at the top of your appDelegate.swift:
+ ```
+ import Stripe
+ ```
+ An error might continue to show up. Make sure you clean the product. The error will eventually disappear. 
  
  # Adding UI Elements
  go to Main.storyboard and add a button and change its label to "Pay". <br />
@@ -180,9 +188,9 @@ self.payButtonOutlet.isHidden = true
  Now add the function paymentCardTextFieldDidChange to conform to the STPPaymentCardTextFieldDelegate protocol: <br />
  (also add the if statement inside of it)
  ```
- func paymentCardTextFieldDidChange(textField: STPPaymentCardTextField) { 
+ func paymentCardTextFieldDidChange(_ textField: STPPaymentCardTextField) { 
   if textField.valid {
-      pay.hidden = false;
+      payButtonOutlet.isHidden = false;
    }
 }
  ```
@@ -207,6 +215,9 @@ self.payButtonOutlet.isHidden = true
         
     }
  ```
+ Above you might get warnings in your print statements. This isn't a big deal, but you can go ahead and unwrap those by adding an ! at the end. (See Xcode suggestion)
+ <br />
+
  Let's go back to the function payButtonAction, add the following code:
  ```
          let card = paymentTextField.cardParams
@@ -221,6 +232,13 @@ self.payButtonOutlet.isHidden = true
         })
 ```
 
+Now you should still see a bunch of errors and warnings here. It is because you have not imported Stripe and Alamofire yet. Be sure to do that at the top of your ViewController:
+```
+import Stripe
+import Alamofire
+```
+
+
 # Getting the charge.php link
 go to terminal:
 ```
@@ -233,4 +251,7 @@ copy the link in the address bar <br />
 add to that link: /charge.php <br />
 it should look something like this: https://<...>.herokuapp.com/charge.php <br />
 
+
+
+Alright, that is it! Go ahead and run your project in Xcode. Enter in a valid or test credit card number, press pay, and then you should see a success message and a new payment appearing in your Stripe. 
  
