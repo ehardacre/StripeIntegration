@@ -169,6 +169,11 @@ by going to your stripe dashboard and clicking on API on the left side.
  open up a dual view with the storyboard on one side and ViewController.swift on the other side <br />
  connect the pay button to an outlet in ViewController.swift name the outlet payButtonOutlet <br />
  connect the pay button to an action in ViewController.swift name the action payButtonAction <br />
+ In order to Utilize the Stripe SDK in this class you must import Stripe and Alamofire
+ ```
+ import Stripe
+ import Alamofire
+ ```
  change the class header to include STPPaymentCardTextFieldDelegate: <br />
  (this will cause an error temporarily)
  ```
